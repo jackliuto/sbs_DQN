@@ -1,0 +1,126 @@
+////////////////////////////////////////////////////////////////////
+//Simple 2D navigaiton with discrete actions
+//
+////////////////////////////////////////////////////////////////////
+domain navigation_discrete {
+
+    requirements = {
+        reward-deterministic
+    };
+
+    types {
+		agent : object;
+	}; 
+
+    pvariables {
+
+
+        // minerals constants
+        GOAL_POS_X_MIN_1(agent): { non-fluent, real, default = 8 };            // goal x location
+        GOAL_POS_Y_MIN_1(agent): { non-fluent, real, default = 8 };            // goal y location
+        GOAL_POS_X_MAX_1(agent): { non-fluent, real, default = 10 };            // goal x location
+        GOAL_POS_Y_MAX_1(agent): { non-fluent, real, default = 10 };            // goal y location
+
+
+        GOAL_POS_X_MIN_2(agent): { non-fluent, real, default = 0 };            // goal x location
+        GOAL_POS_Y_MIN_2(agent): { non-fluent, real, default = 8 };            // goal y location
+        GOAL_POS_X_MAX_2(agent): { non-fluent, real, default = 2 };            // goal x location
+        GOAL_POS_Y_MAX_2(agent): { non-fluent, real, default = 10 };            // goal y location
+
+        MAX_POS_X(agent): { non-fluent, real, default = 10 };            // goal x location
+        MAX_POS_Y(agent): { non-fluent, real, default = 10 };            // goal y location
+        MIN_POS_X(agent): { non-fluent, real, default = 0 };            // goal x location
+        MIN_POS_Y(agent): { non-fluent, real, default = 0 };            // goal y location
+
+        MOVE_DISTANCE(agent) : { non-fluent, real, default = 1 };
+        GOAL_REWARD_1(agent) : { non-fluent, real, default = 1 };
+        GOAL_REWARD_2(agent) : { non-fluent, real, default = 1 };    
+
+        in_goal_1(agent): {interm-fluent, bool};
+        in_goal_2(agent): {interm-fluent, bool};           
+
+        // states
+        pos_x(agent)    : { state-fluent, real, default = 0 };          // rover x position
+        pos_y(agent)    : { state-fluent, real, default = 0 };          // rover y position
+
+        // actions
+        move_east(agent)     : { action-fluent, bool, default = false };     // force input in +x direction
+        move_west(agent)      : { action-fluent, bool, default = false };     // force input in -x direction
+        move_north(agent)     : { action-fluent, bool, default = false };     // force input in +y direction
+        move_south(agent)      : { action-fluent, bool, default = false };     // force input in -y direction
+        do_nothing(agent) : { action-fluent, bool, default = false }; 
+
+        
+
+       
+    };
+
+    cpfs {
+
+        in_goal_1(?a) = ( (pos_x(?a) >= GOAL_POS_X_MIN_1(?a)) ^ (pos_x(?a) <= GOAL_POS_X_MAX_1(?a)) ^
+                        (pos_y(?a) >= GOAL_POS_Y_MIN_1(?a)) ^ (pos_y(?a) <= GOAL_POS_Y_MAX_1(?a))
+                      );
+        
+        in_goal_2(?a) = ( (pos_x(?a) >= GOAL_POS_X_MIN_2(?a)) ^ (pos_x(?a) <= GOAL_POS_X_MAX_2(?a)) ^
+                        (pos_y(?a) >= GOAL_POS_Y_MIN_2(?a)) ^ (pos_y(?a) <= GOAL_POS_Y_MAX_2(?a))
+                      );
+
+        // pos_x'(?a) = if (do_nothing(?a)) then pos_x(?a) 
+        //                 else  
+        //                     max [
+        //                         min[
+        //                             pos_x(?a) + move_east(?a)*MOVE_DISTANCE(?a) - move_west(?a)*MOVE_DISTANCE(?a), 
+        //                             MAX_POS_X(?a)
+        //                             ],
+        //                         MIN_POS_X(?a)
+        //                         ];
+
+        pos_x'(?a) = max [
+                            min[
+                                if (do_nothing(?a)) then pos_x(?a)
+                                else if (move_east(?a)) then pos_x(?a) + MOVE_DISTANCE(?a)
+                                else if (move_west(?a)) then pos_x(?a) - MOVE_DISTANCE(?a)
+                                else pos_x(?a), 
+                                MAX_POS_X(?a)
+                                ],
+                            MIN_POS_X(?a)
+                        ];
+
+                    
+        // pos_y'(?a) = if (do_nothing(?a)) then pos_y(?a)
+        //                 else 
+        //                     max [
+        //                         min[
+        //                             pos_y(?a) + move_north(?a)*MOVE_DISTANCE(?a) - move_south(?a)*MOVE_DISTANCE(?a), 
+        //                             MAX_POS_Y(?a)
+        //                             ],
+        //                         MIN_POS_Y(?a)
+        //                         ];
+
+        pos_y'(?a) = max [
+                    min[
+                        if (do_nothing(?a)) then pos_y(?a)
+                        else if (move_north(?a)) then pos_y(?a) + MOVE_DISTANCE(?a)
+                        else if (move_south(?a)) then pos_y(?a) - MOVE_DISTANCE(?a)
+                        else pos_y(?a), 
+                        MAX_POS_Y(?a)
+                        ],
+                    MIN_POS_Y(?a)
+                ];
+
+    };
+
+    // negative distance to the goal
+    reward = sum_{?a : agent}[
+                                if  (in_goal_1(?a)) then  GOAL_REWARD_1(?a)
+                                else if (in_goal_2(?a)) then  GOAL_REWARD_2(?a)
+                                else 0
+                              ];
+
+    state-invariants {
+    };
+
+    action-preconditions {
+    };
+
+}
