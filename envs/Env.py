@@ -60,6 +60,16 @@ class envWrapper(gym.Env):
                 new_observation_space[k] = Discrete(v.n)
         return new_observation_space
 
+    def init_random_rddl_state(self, state, seed):
+        self.RDDLEnv.state = state
+        self.RDDLEnv.sampler.state = state
+        self.RDDLEnv.sampler.obs = state
+        for k, v in state.items():
+            name = k.split('___')[0]
+            idx = int(k.split('___')[1][1:])-1
+            self.RDDLEnv.sampler.init_values[name][idx] = v
+        self.RDDLEnv.reset(seed)
+
     def reset(self, seed=None):
         if self.random_start:
             state = {}
@@ -68,13 +78,12 @@ class envWrapper(gym.Env):
                     low = self.sample_range[k][0]
                     high = self.sample_range[k][1]
                     sample = np.random.uniform(low=low, high=high)
-                    state[k] = float(sample)
+                    state[k] = np.float64(sample)
                 else:
                     sample = np.random.choice([True, False])
                     state[k] = sample
             self.state = self.convert_dict_numpy(state)
-            self.RDDLEnv.reset(seed)
-            self.RDDLEnv.state = state
+            self.init_random_rddl_state(state, seed)
         else:
             self.state = self.convert_dict_numpy(self.RDDLEnv.reset(seed))
 
@@ -82,6 +91,7 @@ class envWrapper(gym.Env):
         return (self.state, {})
     
     def step(self, action):
+
         action_dict = self.action_vec2dict(action)
         next_state, reward, done, info = self.RDDLEnv.step(action_dict)
 
@@ -91,8 +101,6 @@ class envWrapper(gym.Env):
             done = True
         else:
             done = False
-        
-        pdb.set_trace()
 
         self.state = self.convert_dict_numpy(next_state)  
 

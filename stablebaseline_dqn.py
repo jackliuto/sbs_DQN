@@ -22,15 +22,15 @@ GAMMA = 0.9
 TAU = 0.001
 EXP_BEG = 0.9
 EXP_FINAL = 0.05
-BUFFER_SIZE = 1000000
+BUFFER_SIZE = 100000
 BATCH_SIZE = 64
 EXPLORATION_FRACTION = 0.3
 
-MAX_EPS_LEN = 1000
+MAX_EPS_LEN = 100
 
 RANDOM_START = True
 
-total_timesteps = 100000000    # Adjust as needed
+total_timesteps = 10000000    # Adjust as needed
 
 SAMPLE_RANGE = {'pos_x___a1':(0.0,10.0), 'pos_y___a1':(0.0,10.0), 'has_mineral___a1':(True, False)}
 
@@ -39,7 +39,7 @@ SAMPLE_RANGE = {'pos_x___a1':(0.0,10.0), 'pos_y___a1':(0.0,10.0), 'has_mineral__
 RDDLEnv = RDDLEnv.RDDLEnv(domain=DOMAIN_PATH, instance=INSTANCE_PATH)
 env = envWrapper(RDDLEnv, sample_range=SAMPLE_RANGE, max_episode_length=MAX_EPS_LEN, random_start=RANDOM_START)
 
-check_env(env)
+# check_env(env)
 
 
 # set callbacks
@@ -67,16 +67,19 @@ model = LoweboundDQN('MultiInputPolicy', env,
 
 model.set_logger(new_logger)
 
-for i in range(10):
-    print(env.reset())
-    action = env.action_space.sample()
-    state = env.step(env.action_space.sample())
-    print(action, state)
-    print(env.RDDLEnv.state)
-
-raise ValueError
+# for i in range(100):
+#     s = env.reset()
+#     for i in range(100):
+#         action = env.action_space.sample()
+#         ns, r, _, _, _ = env.step(action)
+#         if r == 1:
+#             print(s)
+#         s = ns
+# raise ValueError
 
 
 training_info = model.learn(total_timesteps=total_timesteps,
                             callback=checkpoint_callback)
+
+
 

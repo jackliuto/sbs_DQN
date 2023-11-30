@@ -76,19 +76,33 @@ domain navigation_discrete {
                         ];
 
         pos_y'(?a) = max [
-                    min[
-                        if (move_north(?a)) then pos_y(?a) + MOVE_DISTANCE(?a)
-                        else if (move_south(?a)) then pos_y(?a) - MOVE_DISTANCE(?a)
-                        else pos_y(?a), 
-                        MAX_POS_Y(?a)
-                        ],
-                    MIN_POS_Y(?a)
+                            min[
+                                if (move_north(?a)) then pos_y(?a) + MOVE_DISTANCE(?a)
+                                else if (move_south(?a)) then pos_y(?a) - MOVE_DISTANCE(?a)
+                                else pos_y(?a), 
+                                MAX_POS_Y(?a)
+                                ],
+                            MIN_POS_Y(?a)
                 ];
 
     };
 
     // negative distance to the goal
-    reward = sum_{?a : agent}[ if (in_base(?a) ^ has_mineral(?a)) then GOAL_REWARD(?a) else 0 ];
+    // reward = sum_{?a : agent}[ if ( ((pos_x(?a) >= BASE_POS_X_MIN(?a)) ^ (pos_x(?a) <= BASE_POS_X_MAX(?a)) ^
+    //                                  (pos_y(?a) >= BASE_POS_Y_MIN(?a)) ^ (pos_y(?a) <= BASE_POS_Y_MAX(?a))) 
+    //                                  ^ has_mineral(?a)) then 1 
+    //                             else if ( ((pos_x(?a) >= MINERAL_POS_X_MIN(?a)) ^ (pos_x(?a) <= MINERAL_POS_X_MAX(?a)) ^
+    //                                       (pos_y(?a) >= MINERAL_POS_Y_MIN(?a)) ^ (pos_y(?a) <= MINERAL_POS_Y_MAX(?a))) 
+    //                                  ^ ~has_mineral(?a)) then 1
+    //                             else 0 ];
+
+    reward = sum_{?a : agent}[ if ( ((pos_x(?a) >= BASE_POS_X_MIN(?a)) ^ (pos_x(?a) <= BASE_POS_X_MAX(?a)) ^
+                                     (pos_y(?a) >= BASE_POS_Y_MIN(?a)) ^ (pos_y(?a) <= BASE_POS_Y_MAX(?a))) 
+                                     ^ has_mineral(?a)) then 1 
+                                else if ( ((pos_x(?a) >= MINERAL_POS_X_MIN(?a)) ^ (pos_x(?a) <= MINERAL_POS_X_MAX(?a)) ^
+                                          (pos_y(?a) >= MINERAL_POS_Y_MIN(?a)) ^ (pos_y(?a) <= MINERAL_POS_Y_MAX(?a))) 
+                                     ^ ~has_mineral(?a)) then 1
+                                else 0 ];
 
     state-invariants {
     };

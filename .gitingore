@@ -1,4 +1,6 @@
-/checkpoints
+./checkpoints
+./logs
 
 **/*.pyc
 **/*.zip
+**/*.0

@@ -11,7 +11,7 @@ import pdb
 class LoweboundDQN(DQN):
     def __init__(self, policy, env, lower_bound=0, **kwargs):
         super(LoweboundDQN, self).__init__(policy, env, **kwargs)
-        self.lower_bound = lower_bound
+        self.lower_bound = np.load('./save_tensor/rover.npy')
 
     def train(self, gradient_steps: int, batch_size: int = 100) -> None:
         # Switch to train mode (this affects batch norm / dropout)
