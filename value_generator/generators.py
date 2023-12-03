@@ -1,4 +1,4 @@
-import torch
+import torch as th
 import torch.nn as nn
 
 import warnings
@@ -27,6 +27,8 @@ from pyRDDLGym.Solvers.SDP.helper.mdp import MDP
 from pyRDDLGym.Solvers.SDP.helper.mdp_parser import Parser
 from pyRDDLGym.Solvers.SDP.helper.policy import Policy
 from pyRDDLGym.Solvers.SDP.pe import PolicyEvaluation
+
+import pdb
 
 class ValueGenerator:
     def __init__(self, env, 
@@ -142,13 +144,24 @@ class ValueGenerator:
         for idx in indices:
             bool_assign = {}
             cont_assign = {}
+            state = {}
             for i, k in enumerate(self.env.observation_list):
                 if i in bool_dims:
                     bool_assign[var_dict[k]] = bool(idx[i])
+                    state[k] = th.tensor([[idx[i]]], dtype=th.float32).to(self.network.device)
                 else:
                     cont_assign[var_dict[k]] = float(idx[i]*self.sample_range[k][2])
-            value = xadd.evaluate(value_id_pe, bool_assign=bool_assign, cont_assign=cont_assign)
+                    state[k] = th.tensor([[idx[i]]], dtype=th.int32).to(self.network.device)
+            value_diff = xadd.evaluate(value_id_pe, bool_assign=bool_assign, cont_assign=cont_assign)
+
+
+
+            q_values = self.network.policy.q_net(state)
+            max_q_values = q_values.max(dim=1)
+
+            value = value_diff + max_q_values.values.item()
             value_tensor[idx] = value
+
         
         np.set_printoptions(precision=2)
 
@@ -304,6 +317,7 @@ class ValueGenerator:
         """
         # Generate samples
         samples = self.extract_samples(self.sample_size)
+
         predictions, _ = self.network.predict(samples)
 
         samples_df = {k:v.reshape(-1) for k,v in samples.items()}
