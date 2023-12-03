@@ -16,7 +16,7 @@ MAX_DEPTH = 5
 N_PE_STEPS = 5
 
 
-SAMPLE_RANGE = {'pos_x___a1':(0.0,10.0), 'pos_y___a1':(0.0,10.0), 'has_mineral___a1':(True, False)}
+SAMPLE_RANGE = {'pos_x___a1':(0.0,10.0,1), 'pos_y___a1':(0.0,10.0,1), 'has_mineral___a1':(True, False, None)}
 
 
 RDDLEnv = RDDLEnv.RDDLEnv(domain=DOMAIN_PATH_TARGET, instance=INSTANCE_PATH_TARGET)

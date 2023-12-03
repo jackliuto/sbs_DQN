@@ -128,7 +128,8 @@ class ValueGenerator:
                 dim_list.append(2)
                 bool_dims.append(i)
             else:
-                dim_list.append(int(range[1] - range[0] + 1))
+                arange = np.arange(range[0], range[1]+range[2], range[2])
+                dim_list.append(len(arange))
         value_tensor = np.zeros(dim_list, dtype=np.float32)
 
         indices = list(np.ndindex(tuple(dim_list)))
@@ -145,10 +146,16 @@ class ValueGenerator:
                 if i in bool_dims:
                     bool_assign[var_dict[k]] = bool(idx[i])
                 else:
-                    cont_assign[var_dict[k]] = float(idx[i])
+                    cont_assign[var_dict[k]] = float(idx[i]*self.sample_range[k][2])
             value = xadd.evaluate(value_id_pe, bool_assign=bool_assign, cont_assign=cont_assign)
             value_tensor[idx] = value
         
+        np.set_printoptions(precision=2)
+
+
+        print(value_tensor[0])
+        print(value_tensor[1])
+
         np.save('./saved_tensor/rover', value_tensor)
 
         return value_tensor
@@ -283,16 +290,8 @@ class ValueGenerator:
             if isinstance(v, Box):
                 low = sample_range[k][0]
                 high = sample_range[k][1]
-                ## sample all possible values
-                # samples = np.random.uniform(low=low, high=high, size=(sample_size, v.shape[0])).astype(np.float32)
-               
-                # sample only int
-                samples = np.random.randint(low=low, high=high+1, size=(sample_size, v.shape[0])).astype(np.float32)
-                
-                ## sample with 0.5 interval
-                # low_scaled = int(low * 2)
-                # high_scaled = int(high * 2)
-                # samples = np.random.randint(low=low_scaled, high=high_scaled, size=(sample_size, v.shape[0])).astype(np.float32) * 0.5
+                arange = np.arange(low, high+sample_range[k][2], sample_range[k][2])
+                samples = np.random.choice(arange, size=sample_size).reshape(-1, 1).astype(np.float32)    
                 sample_dict[k] = samples
             else:
                 sample_dict[k] = np.random.choice([1, 0], size=sample_size).reshape(-1, 1).astype(np.int32)

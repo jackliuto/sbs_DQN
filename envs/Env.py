@@ -77,7 +77,12 @@ class envWrapper(gym.Env):
                 if 'gym.spaces.box.Box' in str(type(v)):
                     low = self.sample_range[k][0]
                     high = self.sample_range[k][1]
-                    sample = np.random.uniform(low=low, high=high)
+                    interval = self.sample_range[k][2]
+                    if self.sample_range[k][2] == None:
+                        sample = np.random.uniform(low=low, high=high)
+                    else:
+                        arange = np.arange(low, high+interval, interval)
+                        sample = np.random.choice(arange) 
                     state[k] = np.float64(sample)
                 else:
                     sample = np.random.choice([True, False])

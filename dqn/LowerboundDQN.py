@@ -8,10 +8,32 @@ from torch.nn import functional as F
 
 import pdb
 
-class LoweboundDQN(DQN):
-    def __init__(self, policy, env, lower_bound=0, **kwargs):
-        super(LoweboundDQN, self).__init__(policy, env, **kwargs)
-        self.lower_bound = np.load('./save_tensor/rover.npy')
+class LowerboundDQN(DQN):
+    def __init__(self, policy, env, lowerbound_tensor, **kwargs):
+        super(LowerboundDQN, self).__init__(policy, env, **kwargs)
+        self.action_list = env.action_list
+        self.observation_list = env.observation_list
+        self.sample_range = env.sample_range
+        self.lower_bound_tensor = th.tensor(np.load(lowerbound_tensor)).to(self.device)
+
+    def state_to_lowerbound(self, state, lb_tensor):
+        combined_tensor = th.empty((self.batch_size, 1), dtype=th.float32).to(self.device)
+        for s in self.observation_list:
+            interval = self.sample_range[s][2]
+            if interval != None:
+                state_tensor = state[s]
+                rounded_state_tensor = th.round(state_tensor / interval) * interval
+                idx_state_tensor = rounded_state_tensor / interval
+                combined_tensor = th.cat((combined_tensor, idx_state_tensor), dim=1)
+            else:
+                combined_tensor = th.cat((combined_tensor, state[s]), dim=1)
+        idx_tensor = combined_tensor[:,1:].to(th.int64)
+        indices = list(idx_tensor.t())
+        lowerbound = lb_tensor[indices].reshape(-1, 1)
+
+        return lowerbound
+
+
 
     def train(self, gradient_steps: int, batch_size: int = 100) -> None:
         # Switch to train mode (this affects batch norm / dropout)
@@ -33,6 +55,14 @@ class LoweboundDQN(DQN):
                 next_q_values = next_q_values.reshape(-1, 1)
                 # 1-step TD target
                 target_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * next_q_values
+
+                lowerbound_v_values = self.state_to_lowerbound(replay_data.next_observations, self.lower_bound_tensor)
+                lowerbound_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * lowerbound_v_values
+
+                max_q_values = th.max(target_q_values, lowerbound_q_values)
+                
+
+                pdb.set_trace()
 
             # Get current Q-values estimates
             current_q_values = self.q_net(replay_data.observations)
