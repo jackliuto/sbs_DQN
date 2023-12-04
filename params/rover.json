@@ -1,0 +1,25 @@
+{
+    "domain_type" : "rover",
+    "instance_type" : "source",
+    "algo_type": "dqn",
+    "domain_path": "./RDDL/rover/domain.rddl",
+    "instance_path_source": "./RDDL/rover/instance1.rddl",
+    "instance_path_target": "./RDDL/rover/instance2.rddl",
+    "cache_path":"./saved_tensor/rover/",
+    "save_path":"./checkpoints/rover/",
+    "log_path":"./logs/rover/",
+    "warmstart_model": "./checkpoints/rover/",
+    "sdp_steps": 10,
+    "gamma":0.9,
+    "tau": 0.001,
+    "exp_beg": 0.9,
+    "exp_final": 0.1,
+    "buffer_size": 1000000,
+    "batch_size": 128,
+    "exploration_fraction":0.2,
+    "max_eps_length": 100,
+    "total_timesteps": 10000000,
+    "net_arch": [64,128,64],
+    "random_start": true
+   
+}

@@ -10,10 +10,8 @@ non-fluents navigation_d {
 	};
 
 	non-fluents {
-		BASE_POS_X_MIN(a1) = 0;
-        BASE_POS_Y_MIN(a1) = 0;
-        BASE_POS_X_MAX(a1) = 2;
-        BASE_POS_Y_MAX(a1) = 2;
+		REWARD_BASE1(a1) = 0;
+		REWARD_BASE2(a1) = 2;
 
 	};
 

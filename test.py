@@ -20,6 +20,8 @@ indices = list(list_of_indices.t())
 # Use the tensors to index into tensor_3d
 # extracted_values = tensor_3d[indices[0], indices[1], indices[2]]
 
+tensor_3d = tensor_3d.to('')
+
 extracted_values = tensor_3d[indices]
 
 print(extracted_values)

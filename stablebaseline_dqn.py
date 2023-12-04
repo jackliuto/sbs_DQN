@@ -1,69 +1,79 @@
 import warnings
 warnings.filterwarnings("ignore")
 
-from pyRDDLGym import RDDLEnv
 
 from envs.Env  import envWrapper
 from dqn.LowerboundDQN import LowerboundDQN
+from utils.params import Params
 
-
-
+from pyRDDLGym import RDDLEnv
 from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, EvalCallback
 from stable_baselines3.common.logger import configure
-
 from stable_baselines3.common.env_checker import check_env
 
+
+params = Params("./params/rover.json")
+
 # globalvars
-DOMAIN_PATH = "./RDDL/mars_rover/domain.rddl"
-INSTANCE_PATH = "./RDDL/mars_rover/instance1.rddl"
+ALGO_TYPE = params.algo_type
+DOMAIN_PATH = params.domain_path
+if params.instance_type == "source":
+    INSTANCE_PATH = params.instance_path_source
+elif params.instance_type == "target":
+    INSTANCE_PATH = params.instance_path_target
+WS_PATH = params.warmstart_model
+GAMMA = params.gamma
+TAU = params.tau
+EXP_BEG = params.exp_beg
+EXP_FINAL = params.exp_final
+BUFFER_SIZE = params.buffer_size
+BATCH_SIZE = params.batch_size
+EXPLORATION_FRACTION = params.exploration_fraction
+MAX_EPS_LEN = params.max_eps_length
+TOTAL_TIMESTEPS = params.total_timesteps
+RANDOM_START = params.random_start
+LB_PATH = params.cache_path+str(params.sdp_steps)+'.npy'
+MODEL_NAME = '{0}_{1}_{2}_{3}'.format(params.domain_type, params.sdp_steps, params.algo_type, params.instance_type)
 
-GAMMA = 0.9
-TAU = 0.001
-EXP_BEG = 0.9
-EXP_FINAL = 0.05
-BUFFER_SIZE = 512
-BATCH_SIZE = 5
-EXPLORATION_FRACTION = 0.3
+SAVE_PATH = params.save_path+MODEL_NAME+'/'
+LOG_PATH = params.log_path+MODEL_NAME+'/'
 
-MAX_EPS_LEN = 100
 
-RANDOM_START = True
+if params.domain_type == "rover":
+    SAMPLE_RANGE = {'pos_x___a1':(0.0, 10.0, 1.0), 'pos_y___a1':(0.0, 10.0, 1.0), 'has_mineral___a1':(True, False, None)}
 
-total_timesteps = 100000    # Adjust as needed
-
-SAMPLE_RANGE = {'pos_x___a1':(0.0, 10.0, 1.0), 'pos_y___a1':(0.0, 10.0, 1.0), 'has_mineral___a1':(True, False, None)}
-
+policy_kwargs = dict(
+    net_arch=params.net_arch  # Example architecture: three layers with 64, 128, and 64 units
+)
 
 # set enviroment
 RDDLEnv = RDDLEnv.RDDLEnv(domain=DOMAIN_PATH, instance=INSTANCE_PATH)
 env = envWrapper(RDDLEnv, sample_range=SAMPLE_RANGE, max_episode_length=MAX_EPS_LEN, random_start=RANDOM_START)
 
-check_env(env)
+eval_env = envWrapper(RDDLEnv, sample_range=SAMPLE_RANGE, max_episode_length=MAX_EPS_LEN, random_start=False)
 
 # set callbacks
 checkpoint_callback = CheckpointCallback(save_freq = 1000, 
-                                         save_path = './checkpoints/rover_random_start/',
-                                         name_prefix = 'rl_model')
+                                         save_path = SAVE_PATH,
+                                         name_prefix = MODEL_NAME)
 
-# eval_callback = EvalCallback(eval_env, best_model_save_path='./logs/',
-#                              log_path='./logs/', eval_freq=500,
-#                              deterministic=True, render=False)
+eval_callback = EvalCallback(eval_env,
+                             best_model_save_path=SAVE_PATH,
+                             log_path=LOG_PATH,
+                             eval_freq=1000,  # Evaluate every 1000 iterations
+                             deterministic=True,
+                             render=False)
 
 # set up logger
-tmp_path = "./logs/rover_random_start/"
-lowerbound_path = './saved_tensor/rover.npy'
-new_logger = configure(tmp_path, ["stdout", "csv", "log", "tensorboard"])        
-
-
-source_network = DQN.load('../checkpoints/mars_rover/rl_model_8368000_steps.zip', 
-                        env=env, exploration_fraction=0.0)
+new_logger = configure(LOG_PATH, ["stdout", "csv", "log", "tensorboard"])        
 
 model = LowerboundDQN(
             'MultiInputPolicy', 
             env,
-            lowerbound_path,
-            source_network,
+            LB_PATH,
+            WS_PATH,
+            algo_type=ALGO_TYPE,
             gamma=GAMMA,
             tau=TAU,
             exploration_initial_eps=EXP_BEG,
@@ -71,7 +81,8 @@ model = LowerboundDQN(
             buffer_size=BUFFER_SIZE,
             batch_size=BATCH_SIZE,
             exploration_fraction=EXPLORATION_FRACTION,
-            verbose=1)
+            verbose=0,
+            policy_kwargs=policy_kwargs)
 
 model.set_logger(new_logger)
 
@@ -88,8 +99,8 @@ model.set_logger(new_logger)
 # raise ValueError
 
 
-training_info = model.learn(total_timesteps=total_timesteps,
-                            callback=checkpoint_callback)
+training_info = model.learn(total_timesteps=TOTAL_TIMESTEPS,
+                            callback=CallbackList([checkpoint_callback, eval_callback]))
 
 
 

@@ -10,7 +10,8 @@ non-fluents navigation_d {
 	};
 
 	non-fluents {
-		MOVE_DISTANCE(a1)=1;
+		REWARD_BASE1(a1) = 1;
+		REWARD_BASE2(a1) = 1;
 
 	};
 

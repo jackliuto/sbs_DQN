@@ -27,9 +27,12 @@ loaded_model = DQN.load(MODEL_PATH,
                         env=env, exploration_fraction=0.0)
 
 value_generator = ValueGenerator(env, 
-                                 domain_path_source=DOMAIN_PATH_TARGET, instance_path_source=INSTANCE_PATH_TARGET,
-                                 domain_path_target=DOMAIN_PATH_SOURCE, instance_path_target=INSTANCE_PATH_SOURCE,
-                                 network=loaded_model, sample_range=SAMPLE_RANGE, 
-                                 max_depth=MAX_DEPTH, n_pe_steps=N_PE_STEPS)
+                                 domain_path_source=DOMAIN_PATH_SOURCE, instance_path_source=INSTANCE_PATH_SOURCE,
+                                 domain_path_target=DOMAIN_PATH_TARGET, instance_path_target=INSTANCE_PATH_TARGET,
+                                 network=loaded_model, 
+                                 save_path = SAVE_PATH,
+                                 sample_range=SAMPLE_RANGE, 
+                                 max_depth=MAX_DEPTH, 
+                                 n_pe_steps=N_PE_STEPS)
 
 # value_generator.do_pe()

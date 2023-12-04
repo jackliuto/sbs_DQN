@@ -34,24 +34,29 @@ class ValueGenerator:
     def __init__(self, env, 
                  domain_path_source, instance_path_source,
                  domain_path_target, instance_path_target, 
-                 network, sample_range, max_depth=None,
-                 n_pe_steps=5, discount=0.9):
+                 network,
+                 save_path, 
+                 sample_range, 
+                 max_depth=None,
+                 n_pe_steps=5, 
+                 discount=0.9):
         
         self.sample_size = 100000
 
         self.env = env
         self.network = network
+        self.save_path = save_path
         self.sample_range = sample_range
         self.max_depth = max_depth
         self.n_pe_steps = n_pe_steps
         self.disount = discount
-        self.xadd_model, self.xadd_context = self.get_xadd_model_from_file(domain_path_target, instance_path_target)
+        self.xadd_model_target, self.xadd_context_target = self.get_xadd_model_from_file(domain_path_target, instance_path_target)
         self.xadd_model_source, self.xadd_context_source = self.get_xadd_model_from_file(domain_path_source, instance_path_source)
         self.diff_reward_node = self.build_model_diff()
         self.decision_tree_nn = self.network2tree(max_depth=max_depth)
         self.policy_xadd_dict = self.tree2xaddpolicy(self.decision_tree_nn)
-        self.xadd_value_node = self.do_pe(self.xadd_model, self.xadd_context, self.policy_xadd_dict, self.diff_reward_node)
-        self.xadd_tensor = self.xadd2tensor(self.xadd_context, self.xadd_value_node)
+        self.xadd_value_node = self.do_pe(self.xadd_model_target, self.xadd_context_target, self.policy_xadd_dict, self.diff_reward_node)
+        self.xadd_tensor = self.xadd2tensor(self.xadd_context_target, self.xadd_value_node)
 
         
 
@@ -64,10 +69,10 @@ class ValueGenerator:
         source_reward_node = self.xadd_context_source._id_to_node.get(self.xadd_model_source.reward, None)
         source_reward_node.turn_off_print_node_info()
         node_str = str(source_reward_node)
-        source_reward_id = self.xadd_context.import_xadd(xadd_str=node_str, locals=self.xadd_model.ns)
-        diff_reward_id = self.xadd_context.apply(self.xadd_model.reward, source_reward_id, 'subtract')
+        source_reward_id = self.xadd_context_target.import_xadd(xadd_str=node_str, locals=self.xadd_model_target.ns)
+        diff_reward_id = self.xadd_context_target.apply(self.xadd_model_target.reward, source_reward_id, 'subtract')
 
-        diff_reward_id = self.xadd_context.reduce_lp(diff_reward_id)
+        diff_reward_id = self.xadd_context_target.reduce_lp(diff_reward_id)
 
         return diff_reward_id
 
@@ -132,7 +137,10 @@ class ValueGenerator:
             else:
                 arange = np.arange(range[0], range[1]+range[2], range[2])
                 dim_list.append(len(arange))
+
         value_tensor = np.zeros(dim_list, dtype=np.float32)
+        value_diff_tensor = np.zeros(dim_list, dtype=np.float32)
+        value_source_tensor = np.zeros(dim_list, dtype=np.float32)
 
         indices = list(np.ndindex(tuple(dim_list)))
 
@@ -152,24 +160,35 @@ class ValueGenerator:
                 else:
                     cont_assign[var_dict[k]] = float(idx[i]*self.sample_range[k][2])
                     state[k] = th.tensor([[idx[i]]], dtype=th.int32).to(self.network.device)
+
             value_diff = xadd.evaluate(value_id_pe, bool_assign=bool_assign, cont_assign=cont_assign)
-
-
-
             q_values = self.network.policy.q_net(state)
             max_q_values = q_values.max(dim=1)
+            value_source = max_q_values.values.item()
 
-            value = value_diff + max_q_values.values.item()
+            value = value_diff + value_source
             value_tensor[idx] = value
+
+            value_diff_tensor[idx] = value_diff
+            value_source_tensor[idx] = value_source
 
         
         np.set_printoptions(precision=2)
 
 
+        print('V_target')
         print(value_tensor[0])
         print(value_tensor[1])
+        print('V_source')
+        print(value_source_tensor[0])
+        print(value_source_tensor[1])
+        print('Vdiff')
+        print(value_diff_tensor[0])
+        print(value_diff_tensor[1])
+        
 
-        np.save('./saved_tensor/rover', value_tensor)
+        if self.save_path != None:
+            np.save(self.save_path, value_tensor)
 
         return value_tensor
             
@@ -218,7 +237,7 @@ class ValueGenerator:
                     c_assign[var_dict[k]] = float(v)
                 else:
                     b_assign[var_dict[k]] = bool(v)
-            value = self.xadd_context.evaluate(value_id_pe, bool_assign=b_assign, cont_assign=c_assign)
+            value = self.xadd_context_target.evaluate(value_id_pe, bool_assign=b_assign, cont_assign=c_assign)
             predictions[i] = value
         
 
@@ -255,7 +274,7 @@ class ValueGenerator:
             for j in range(len(y)):
                 c_assign = {var_dict['pos_x___a1']:i, var_dict['pos_y___a1']:j}
                 b_assign = {var_dict['has_mineral___a1']:True}
-                value = self.xadd_context.evaluate(value_id_pe, bool_assign=b_assign, cont_assign=c_assign)
+                value = self.xadd_context_target.evaluate(value_id_pe, bool_assign=b_assign, cont_assign=c_assign)
                 Z[i][j] = value
             
         print(Z.T)
@@ -363,11 +382,11 @@ class ValueGenerator:
 
         xadd_str = self.policy_dict2xadd_str(policy_dict, self.env.action_list)
 
-        policy_id = self.xadd_context.import_xadd(xadd_str=xadd_str, 
-                                                locals=self.xadd_model.ns)
-        policy_id = self.xadd_context.reduce_lp(policy_id)
+        policy_id = self.xadd_context_target.import_xadd(xadd_str=xadd_str, 
+                                                locals=self.xadd_model_target.ns)
+        policy_id = self.xadd_context_target.reduce_lp(policy_id)
 
-        xadd_policy_dict = self.gen_policy_dict(self.env.action_list, policy_id, self.xadd_context)
+        xadd_policy_dict = self.gen_policy_dict(self.env.action_list, policy_id, self.xadd_context_target)
 
         return xadd_policy_dict
 
@@ -494,4 +513,4 @@ class ValueGenerator:
         """
         Make predictions using the XADD model.
         """
-        pass
+        passse

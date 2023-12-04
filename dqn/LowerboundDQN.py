@@ -9,12 +9,13 @@ from torch.nn import functional as F
 import pdb
 
 class LowerboundDQN(DQN):
-    def __init__(self, policy, env, lowerbound_tensor, **kwargs):
+    def __init__(self, policy, env, lowerbound_path, warmstart_path, algo_type, **kwargs):
         super(LowerboundDQN, self).__init__(policy, env, **kwargs)
+        self.algo_type = algo_type
         self.action_list = env.action_list
         self.observation_list = env.observation_list
         self.sample_range = env.sample_range
-        self.lower_bound_tensor = th.tensor(np.load(lowerbound_tensor)).to(self.device)
+        self.lower_bound_tensor = th.tensor(np.load(lowerbound_path)).to(self.device)
 
     def state_to_lowerbound(self, state, lb_tensor):
         combined_tensor = th.empty((self.batch_size, 1), dtype=th.float32).to(self.device)
@@ -56,14 +57,12 @@ class LowerboundDQN(DQN):
                 # 1-step TD target
                 target_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * next_q_values
 
-                lowerbound_v_values = self.state_to_lowerbound(replay_data.next_observations, self.lower_bound_tensor)
-                lowerbound_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * lowerbound_v_values
-
-                max_q_values = th.max(target_q_values, lowerbound_q_values)
+                if self.algo_type == 'lowerbound':
+                    lowerbound_v_values = self.state_to_lowerbound(replay_data.next_observations, self.lower_bound_tensor)
+                    lowerbound_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * lowerbound_v_values
+                    max_q_values = th.max(target_q_values, lowerbound_q_values)
+                    target_q_values = max_q_values
                 
-
-                pdb.set_trace()
-
             # Get current Q-values estimates
             current_q_values = self.q_net(replay_data.observations)
 
