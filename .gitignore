@@ -3,6 +3,7 @@ logs/
 wandb/
 
 stablebaseline_dqn_CC.py
+test.py
 
 *.pyc
 *.zip
