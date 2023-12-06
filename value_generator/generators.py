@@ -1,6 +1,8 @@
 import torch as th
 import torch.nn as nn
 
+import itertools
+
 import warnings
 
 from gymnasium.spaces import Discrete, Dict, Box
@@ -8,7 +10,7 @@ from gymnasium.spaces import Discrete, Dict, Box
 import numpy as np
 import pandas as pd
 
-from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+# from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn import tree
 
 from matplotlib import pyplot as plt
@@ -41,7 +43,7 @@ class ValueGenerator:
                  n_pe_steps=5, 
                  discount=0.9):
         
-        self.sample_size = 100000
+        self.sample_size = 100
 
         self.env = env
         self.network = network
@@ -50,6 +52,9 @@ class ValueGenerator:
         self.max_depth = max_depth
         self.n_pe_steps = n_pe_steps
         self.disount = discount
+
+        self.bool_vars, self.cont_vars = self.filter_vars()
+
         self.xadd_model_target, self.xadd_context_target = self.get_xadd_model_from_file(domain_path_target, instance_path_target)
         self.xadd_model_source, self.xadd_context_source = self.get_xadd_model_from_file(domain_path_source, instance_path_source)
         self.diff_reward_node = self.build_model_diff()
@@ -58,11 +63,15 @@ class ValueGenerator:
         self.xadd_value_node = self.do_pe(self.xadd_model_target, self.xadd_context_target, self.policy_xadd_dict, self.diff_reward_node)
         self.xadd_tensor = self.xadd2tensor(self.xadd_context_target, self.xadd_value_node)
 
-        
-
-    
-    # def regress_reward(self, xadd, reward_id):
-
+    def filter_vars(self):
+        bool_vars = []
+        cont_vars = []
+        for k, v in self.env.observation_space.items():
+            if isinstance(v, Box):
+                cont_vars.append(k)
+            else:
+                bool_vars.append(k)
+        return bool_vars, cont_vars
         
     def build_model_diff(self):
         
@@ -176,12 +185,12 @@ class ValueGenerator:
         np.set_printoptions(precision=2)
 
 
-        print('V_target')
-        print(value_tensor[0])
-        print(value_tensor[1])
-        print('V_source')
-        print(value_source_tensor[0])
-        print(value_source_tensor[1])
+        # print('V_target')
+        # print(value_tensor[0])
+        # print(value_tensor[1])
+        # print('V_source')
+        # print(value_source_tensor[0])
+        # print(value_source_tensor[1])
         print('Vdiff')
         print(value_diff_tensor[0])
         print(value_diff_tensor[1])
@@ -191,105 +200,6 @@ class ValueGenerator:
             np.save(self.save_path, value_tensor)
 
         return value_tensor
-            
-
-        #     if isinstance(v, Box):
-        #         low = self.sample_range[k][0]
-        #         high = self.sample_range[k][1]
-        #         ## sample all possible values
-        #         # samples = np.random.uniform(low=low, high=high, size=(sample_size, v.shape[0])).astype(np.float32)
-               
-        #         # sample only int
-        #         samples = np.arange(low, high+1, 1).astype(np.float32)
-                
-        #         ## sample with 0.5 interval
-        #         # low_scaled = int(low * 2)
-        #         # high_scaled = int(high * 2)
-        #         # samples = np.random.randint(low=low_scaled, high=high_scaled, size=(sample_size, v.shape[0])).astype(np.float32) * 0.5
-        #         sample_dict[k] = samples
-        #     else:
-        #         sample_dict[k] = np.random.choice([1, 0], size=sample_size).reshape(-1, 1).astype(np.int32)
-        # print(self.sample_range)
-
-
-        return    
-
-
-    
-    def xadd2tree(self, xadd, value_id_pe):
-
-        # Generate samples
-        samples = self.extract_samples(self.sample_size)
-
-        predictions = np.zeros(self.sample_size, dtype=np.float32)
-
-        var_set = xadd.collect_vars(value_id_pe)
-        var_dict = {}
-        for i in var_set:
-            var_dict[f"{i}"] = i
-
-        for i in range(self.sample_size):
-            c_assign = {}
-            b_assign = {}
-            for k in samples.keys():
-                v = samples[k][i][0]
-                if isinstance(v, np.float32):
-                    c_assign[var_dict[k]] = float(v)
-                else:
-                    b_assign[var_dict[k]] = bool(v)
-            value = self.xadd_context_target.evaluate(value_id_pe, bool_assign=b_assign, cont_assign=c_assign)
-            predictions[i] = value
-        
-
-        samples_df = {k:v.reshape(-1) for k,v in samples.items()}
-        samples_df = pd.DataFrame(samples_df)[self.env.observation_list] # reorder columns accoring to observation_list
-
-        tree_clf = DecisionTreeRegressor(max_depth=None)
-        tree_clf = tree_clf.fit(samples_df, predictions)
-
-        x = np.arange(0, 11, 1)
-        y = np.arange(0, 11, 1)
-
-        X, Y = np.meshgrid(x, y)
-
-        Z = np.zeros_like(X, dtype=float)
-
-        warnings.filterwarnings("ignore", category=FutureWarning)
-
-        for i in range(len(x)):
-            for j in range(len(y)):
-                obs = pd.DataFrame({'pos_x___a1': np.array([i], dtype=np.float32), 'pos_y___a1': np.array([j], dtype=np.float32), 'has_mineral___a1':1})
-                value = tree_clf.predict(obs)
-                Z[i][j] = value
-
-        np.set_printoptions(precision=2)
-
-        print(Z.T)
-
-        Z = np.zeros_like(X, dtype=float)
-
-        warnings.filterwarnings("ignore", category=FutureWarning)
-
-        for i in range(len(x)):
-            for j in range(len(y)):
-                c_assign = {var_dict['pos_x___a1']:i, var_dict['pos_y___a1']:j}
-                b_assign = {var_dict['has_mineral___a1']:True}
-                value = self.xadd_context_target.evaluate(value_id_pe, bool_assign=b_assign, cont_assign=c_assign)
-                Z[i][j] = value
-            
-        print(Z.T)
-    
-
-
-        return tree_clf
-            
-        
-
-
-
-
-
-        
 
     
     def get_xadd_model_from_file(self, f_domain, f_instance):
@@ -313,68 +223,125 @@ class ValueGenerator:
         context = xadd_model._context
         return xadd_model, context
 
+    # # # old one that uses randomly generated samples
+    # def extract_samples_old(self, sample_range=None):
+    #     if sample_range == None:
+    #         sample_range = self.sample_range
+    #     sample_dict = {}
+    #     for k, v in self.env.observation_space.items():
+    #         if isinstance(v, Box):
+    #             low = sample_range[k][0]
+    #             high = sample_range[k][1]
+    #             arange = np.arange(low, high+sample_range[k][2], sample_range[k][2])
+    #             samples = np.random.choice(arange, size=self.sample_size).reshape(-1, 1).astype(np.float32)    
+    #             sample_dict[k] = samples
+    #         else:
+    #             sample_dict[k] = np.random.choice([1, 0], size=self.sample_size).reshape(-1, 1).astype(np.int32)
+
+    #     return sample_dict
     
-    def extract_samples(self, sample_size, sample_range=None):
+    def extract_samples(self, sample_range):
         if sample_range == None:
             sample_range = self.sample_range
-        sample_dict = {}
-        for k, v in self.env.observation_space.items():
-            if isinstance(v, Box):
-                low = sample_range[k][0]
-                high = sample_range[k][1]
-                arange = np.arange(low, high+sample_range[k][2], sample_range[k][2])
-                samples = np.random.choice(arange, size=sample_size).reshape(-1, 1).astype(np.float32)    
-                sample_dict[k] = samples
+        range_list = []
+
+        for k in self.env.observation_list:
+            range = sample_range[k]
+            if isinstance(self.env.observation_space[k], Box):
+                arange = list(np.arange(range[0], range[1]+range[2], range[2]))        
             else:
-                sample_dict[k] = np.random.choice([1, 0], size=sample_size).reshape(-1, 1).astype(np.int32)
+                arange = list(np.arange(0, 2, 1))
+            range_list.append(arange)
+
+        combinations = list(itertools.product(*range_list)) 
+
+        sample_dict = {k:np.array([]) for k in self.env.observation_list }
+        for comb in combinations:
+            for i, v in enumerate(comb):
+                var_name = self.env.observation_list[i]
+                sample_dict[var_name] = np.append(sample_dict[var_name], v)
+        
+        for k, v in sample_dict.items():
+            if isinstance(self.env.observation_space[k], Box):
+                sample_dict[k] = v.reshape(-1, 1).astype(np.float32)
+            else:
+                # sample_dict[k] = v.reshape(-1, 1).astype(np.int32)
+                sample_dict[k] = v.astype(np.int32)
         
         return sample_dict
+
 
     def network2tree(self, max_depth=None):
         """
         Convert the neural network to a decision tree classifier.
         """
         # Generate samples
-        samples = self.extract_samples(self.sample_size)
+        samples = self.extract_samples(self.sample_range)
 
         predictions, _ = self.network.predict(samples)
 
-        samples_df = {k:v.reshape(-1) for k,v in samples.items()}
-        samples_df = pd.DataFrame(samples_df)[self.env.observation_list] # reorder columns accoring to observation_list
+        samples_dict = {k:v.reshape(-1) for k,v in samples.items()}
+        samples_df = pd.DataFrame(samples_dict)[self.env.observation_list] # reorder columns accoring to observation_list
 
         tree_clf = tree.DecisionTreeClassifier(max_depth=max_depth)
         tree_clf = tree_clf.fit(samples_df, predictions)
+
+        
+        print(self.env.action_list)
+
+        x = np.arange(0, 11, 1)
+        y = np.arange(0, 11, 1)
+        X, Y = np.meshgrid(x, y)
+
+        Z = np.zeros_like(X, dtype=float)
+
+        for i in range(len(x)):
+            for j in range(len(y)):
+                obs = {'pos_x___a1': np.array([i], dtype=np.float32), 'pos_y___a1': np.array([j], dtype=np.float32), 'has_mineral___a1':1}
+                value, _ = self.network.predict(obs)
+                Z[i][j] = value
+        print('network predictions')
+        print(Z)
+
+        Z = np.zeros_like(X, dtype=float)
+
+        for i in range(len(x)):
+            for j in range(len(y)):
+                obs = pd.DataFrame({'pos_x___a1': np.array([i], dtype=np.float32), 'pos_y___a1': np.array([j], dtype=np.float32), 'has_mineral___a1':np.array([1])})
+                obs = obs[self.env.observation_list]
+                value = tree_clf.predict(obs)
+                Z[i][j] = value
+                # inputs.append(np.array([i,j]))
+                # labels.append(env.action_list[value])
+
+        print('tree predictions')
+        print(Z)
+
         return tree_clf
+    
+    def print_xadd(self, xadd, id):
+        x = np.arange(0, 11, 1)
+        y = np.arange(0, 11, 1)
+        X, Y = np.meshgrid(x, y)
+        Z = np.zeros_like(X, dtype=float)
+        
+        var_set = xadd.collect_vars(id)
+
+        var_dict = {}
+        for i in var_set:
+            var_dict[f"{i}"] = i
+
+        print(self.env.action_list)
+        for i in range(len(x)):
+            for j in range(len(y)):
+                c_assign = {var_dict['pos_x___a1']:i, var_dict['pos_y___a1']:j}
+                b_assign = {var_dict['has_mineral___a1']:True}
+                value = self.xadd_context_target.evaluate(id, bool_assign=b_assign, cont_assign=c_assign)
+                Z[i][j] = value
+            
+        print(Z)
 
 
-        # x = np.arange(0, 11, 1)
-        # y = np.arange(0, 11, 1)
-
-        # X, Y = np.meshgrid(x, y)
-
-
-        # Z = np.zeros_like(X, dtype=float)
-
-        # for i in range(len(x)):
-        #     for j in range(len(y)):
-        #         obs = {'pos_x___a1': np.array([i], dtype=np.float32), 'pos_y___a1': np.array([j], dtype=np.float32), 'has_mineral___a1':1}
-        #         value, _ = self.network.predict(obs)
-        #         Z[i][j] = value
-
-        # print(Z.T)
-
-        # Z = np.zeros_like(X, dtype=float)
-
-        # for i in range(len(x)):
-        #     for j in range(len(y)):
-        #         obs = pd.DataFrame({'pos_x___a1': np.array([i], dtype=np.float32), 'pos_y___a1': np.array([j], dtype=np.float32), 'has_mineral___a1':1})
-        #         value = clf.predict(obs)
-        #         Z[i][j] = value
-        #         # inputs.append(np.array([i,j]))
-        #         # labels.append(env.action_list[value])
-
-        # print(self.env.action_list)
-        # print(Z.T)
     
     def tree2xaddpolicy(self, tree_clf):
         
@@ -388,6 +355,10 @@ class ValueGenerator:
 
         xadd_policy_dict = self.gen_policy_dict(self.env.action_list, policy_id, self.xadd_context_target)
 
+        # for k, v in xadd_policy_dict.items():
+        #    print(k)
+        #    self.print_xadd(self.xadd_context_target, v)
+            
         return xadd_policy_dict
 
     def gen_policy_dict(self, action_list, all_policy_id, xadd):
@@ -411,7 +382,7 @@ class ValueGenerator:
                 policy_dict[action] = policy_id
             else:
                 policy_dict[action] = xadd.ZERO
-
+        
         return policy_dict
 
 
@@ -430,7 +401,8 @@ class ValueGenerator:
         if isinstance(self.env.observation_space[var], Box):
             node_str = f"( [{node['feature']} <= {node['threshold']}] {left_str} {right_str} )"
         else:
-            node_str = f"( [{node['feature']}] {left_str} {right_str} )"
+            # need to change order because 0 is false and 1 is true
+            node_str = f"( [{node['feature']}] {right_str} {left_str} )"
         return node_str
 
     def tree2dict(self, clf, feature_names=None):
@@ -461,47 +433,8 @@ class ValueGenerator:
                 node["right"] = tree_nodes[node["right"]]
         
         # Return root node
+
         return tree_nodes[0]
-
-
-
-        # fig = plt.figure(figsize=(50, 30))
-        # tree.plot_tree(clf)
-        # fig.savefig('test_tree.png')
-
-        # x = np.arange(0, 11, 1)
-        # y = np.arange(0, 11, 1)
-
-        # X, Y = np.meshgrid(x, y)
-
-
-        # Z = np.zeros_like(X, dtype=float)
-
-        # for i in range(len(x)):
-        #     for j in range(len(y)):
-        #         obs = {'pos_x___a1': np.array([i], dtype=np.float32), 'pos_y___a1': np.array([j], dtype=np.float32), 'has_mineral___a1':1}
-        #         value, _ = self.network.predict(obs)
-        #         Z[i][j] = value
-
-        # print(Z.T)
-
-        # Z = np.zeros_like(X, dtype=float)
-
-        # for i in range(len(x)):
-        #     for j in range(len(y)):
-        #         obs = pd.DataFrame({'pos_x___a1': np.array([i], dtype=np.float32), 'pos_y___a1': np.array([j], dtype=np.float32), 'has_mineral___a1':1})
-        #         value = clf.predict(obs)
-        #         Z[i][j] = value
-        #         # inputs.append(np.array([i,j]))
-        #         # labels.append(env.action_list[value])
-
-        # print(self.env.action_list)
-        # print(Z.T)
-
-        
-        
-        
-        
 
     def convert_to_xadd(self):
         """
@@ -513,4 +446,4 @@ class ValueGenerator:
         """
         Make predictions using the XADD model.
         """
-        passse
+        pass

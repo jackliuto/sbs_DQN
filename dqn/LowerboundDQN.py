@@ -16,6 +16,15 @@ class LowerboundDQN(DQN):
         self.observation_list = env.observation_list
         self.sample_range = env.sample_range
         self.lower_bound_tensor = th.tensor(np.load(lowerbound_path)).to(self.device)
+        self.warm_start_path = warmstart_path
+
+        if self.algo_type == 'warmstart':
+            self.source_model = DQN.load(self.warm_start_path)
+            q_net_state_dict = self.source_model.policy.q_net.state_dict()
+            q_net_target_state_dict = self.policy.q_net_target.state_dict()
+            self.policy.q_net.load_state_dict(q_net_state_dict)
+            self.policy.q_net_target.load_state_dict(q_net_target_state_dict)
+            
 
     def state_to_lowerbound(self, state, lb_tensor):
         combined_tensor = th.empty((self.batch_size, 1), dtype=th.float32).to(self.device)
@@ -30,7 +39,7 @@ class LowerboundDQN(DQN):
                 combined_tensor = th.cat((combined_tensor, state[s]), dim=1)
         idx_tensor = combined_tensor[:,1:].to(th.int64)
         indices = list(idx_tensor.t())
-        lowerbound = lb_tensor[indices].reshape(-1, 1)
+        lowerbound = lb_tensor[indices].reshape(-1, 1) * 0.5
 
         return lowerbound
 

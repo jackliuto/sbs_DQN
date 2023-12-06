@@ -1,0 +1,11 @@
+{
+    "domain_type" : "rover",
+    "domain_path_source": "./RDDL/rover/domain.rddl",
+    "domain_path_target": "./RDDL/rover/domain.rddl",
+    "instance_path_source": "./RDDL/rover/instance1.rddl",
+    "instance_path_target": "./RDDL/rover/instance2.rddl",
+    "tree_depth": 0,
+    "sdp_steps": 20,
+    "model_path": "./checkpoints/rover/rover_10_dqn_source_1000interval/best_model.zip",
+    "save_path":"./saved_tensor/rover/"   
+}

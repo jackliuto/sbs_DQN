@@ -12,10 +12,8 @@ from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback,
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.env_checker import check_env
 
-import pdb
 
-
-params = Params("./params/train/rover.json")
+params = Params("./params/rover.json")
 
 # globalvars
 ALGO_TYPE = params.algo_type
@@ -35,11 +33,8 @@ EXPLORATION_FRACTION = params.exploration_fraction
 MAX_EPS_LEN = params.max_eps_length
 TOTAL_TIMESTEPS = params.total_timesteps
 RANDOM_START = params.random_start
-LB_PATH = params.cache_path
-TAREGET_UPDATE_INTERVAL = params.target_update_interval
-MODEL_NAME = '{0}_{1}_{2}_{3}_{4}_{5}'.format(params.domain_type, params.sdp_steps, params.algo_type, 
-                                              params.instance_type, params.target_update_interval,
-                                              params.notes)
+LB_PATH = params.cache_path+str(params.sdp_steps)+'.npy'
+MODEL_NAME = 'test_{0}_{1}_{2}_{3}'.format(params.domain_type, params.sdp_steps, params.algo_type, params.instance_type)
 
 SAVE_PATH = params.save_path+MODEL_NAME+'/'
 LOG_PATH = params.log_path+MODEL_NAME+'/'
@@ -47,11 +42,6 @@ LOG_PATH = params.log_path+MODEL_NAME+'/'
 
 if params.domain_type == "rover":
     SAMPLE_RANGE = {'pos_x___a1':(0.0, 10.0, 1.0), 'pos_y___a1':(0.0, 10.0, 1.0), 'has_mineral___a1':(True, False, None)}
-elif params.domain_type == "uav":
-    SAMPLE_RANGE = {'pos_x___a1':(0.0, 10.0, 1.0), 'pos_y___a1':(0.0, 10.0, 1.0), 'pos_z___a1':(0.0, 10.0, 1.0),
-                    'vel___a1':(1.0, 2.0, 0.1),
-                    'phi___a1':(0.0, 1.0, 0.1), 'theta___a1':(0.0, 1.0, 0.1), 'psi___a1':(0.0, 1.0, 0.1),
-                    }
 
 policy_kwargs = dict(
     net_arch=params.net_arch  # Example architecture: three layers with 64, 128, and 64 units
@@ -64,7 +54,7 @@ env = envWrapper(RDDLEnv, sample_range=SAMPLE_RANGE, max_episode_length=MAX_EPS_
 eval_env = envWrapper(RDDLEnv, sample_range=SAMPLE_RANGE, max_episode_length=MAX_EPS_LEN, random_start=False)
 
 # set callbacks
-checkpoint_callback = CheckpointCallback(save_freq = 10000, 
+checkpoint_callback = CheckpointCallback(save_freq = 1000, 
                                          save_path = SAVE_PATH,
                                          name_prefix = MODEL_NAME)
 
@@ -78,12 +68,9 @@ eval_callback = EvalCallback(eval_env,
 # set up logger
 new_logger = configure(LOG_PATH, ["stdout", "csv", "log", "tensorboard"])        
 
-model = LowerboundDQN(
+model = DQN(
             'MultiInputPolicy', 
             env,
-            LB_PATH,
-            WS_PATH,
-            ALGO_TYPE,
             gamma=GAMMA,
             tau=TAU,
             exploration_initial_eps=EXP_BEG,
@@ -91,7 +78,6 @@ model = LowerboundDQN(
             buffer_size=BUFFER_SIZE,
             batch_size=BATCH_SIZE,
             exploration_fraction=EXPLORATION_FRACTION,
-            target_update_interval=TAREGET_UPDATE_INTERVAL,
             verbose=0,
             policy_kwargs=policy_kwargs)
 
@@ -108,6 +94,7 @@ model.set_logger(new_logger)
 #         s = ns
 
 # raise ValueError
+
 
 training_info = model.learn(total_timesteps=TOTAL_TIMESTEPS,
                             callback=CallbackList([checkpoint_callback, eval_callback]))

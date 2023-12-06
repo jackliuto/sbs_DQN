@@ -7,20 +7,14 @@ non-fluents nf_simple_UAV_p0{
 
 	non-fluents {
         // Bounds on the position of the aircraft
-        MIN-X = -50000.0;
-        MAX-X = 500000.0;
-        MIN-Y = -500000.0;
-        MAX-Y = 500000.0;
-        MIN-Z = -50000.0;
-        MAX-Z = 50000.0;
 
         GRAVITY = 9.8;
 
-        SCALE-FACTOR = 0.1;
+        SCALE_FACTOR = 0.1;
 
-        GOAL-X(a1) = 50.0;
-        GOAL-Y(a1) = 50.0;
-        GOAL-Z(a1) = 50.0;
+        GOAL_X(a1) = 10.0;
+        GOAL_Y(a1) = 10.0;
+        GOAL_Z(a1) = 10.0;
 	};
 }
 
@@ -29,12 +23,11 @@ instance simple_UAV_dis_0 {
 	non-fluents = nf_simple_UAV_p0;
 	
 	init-state {
-	    pos-x(a1) = 0.0;
-        pos-y(a1) = 0.0;
-        pos-z(a1) = 0.0;
-        vel(a1) = 0.1;
+		pos_x(a1) = 0.0;
+        pos_y(a1) = 0.0;
+        pos_z(a1) = 0.0;
+        vel(a1) = 1.0;
         psi(a1) = 0.0;
-        phi(a1) = 0.0;
         theta(a1) = 0.0;
  	};
 
