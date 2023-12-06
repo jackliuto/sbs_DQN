@@ -1,7 +1,10 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+
+
 import wandb
+from wandb.integration.sb3 import WandbCallback
 
 from envs.Env  import envWrapper
 from dqn.LowerboundDQN import LowerboundDQN
@@ -36,8 +39,9 @@ TOTAL_TIMESTEPS = params.total_timesteps
 RANDOM_START = params.random_start
 LB_PATH = params.cache_path
 TAREGET_UPDATE_INTERVAL = params.target_update_interval
-MODEL_NAME = '{0}_{1}_{2}_{3}_{4}_{5}'.format(params.domain_type, params.sdp_steps, params.algo_type, 
+MODEL_NAME = '{0}_{1}_{2}_{3}_{4}_{5}_{6}'.format(params.domain_type, params.sdp_steps, params.algo_type, 
                                               params.instance_type, params.target_update_interval,
+                                              params.exp_beg,
                                               params.notes)
 
 SAVE_PATH = params.save_path+MODEL_NAME+'/'
@@ -56,7 +60,11 @@ policy_kwargs = dict(
     net_arch=params.net_arch  # Example architecture: three layers with 64, 128, and 64 units
 )
 
-wandb
+wandb.init(project="lowerbound_dqn", 
+           name=MODEL_NAME, 
+           config=params,
+           sync_tensorboard=True
+           )
 
 
 # set enviroment
@@ -111,8 +119,10 @@ model.set_logger(new_logger)
 
 # raise ValueError
 
+WandbCallback = WandbCallback()
+
 training_info = model.learn(total_timesteps=TOTAL_TIMESTEPS,
-                            callback=CallbackList([checkpoint_callback, eval_callback]))
+                            callback=CallbackList([checkpoint_callback, eval_callback, WandbCallback]))
 
 
 

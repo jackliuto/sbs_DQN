@@ -18,7 +18,7 @@ class LowerboundDQN(DQN):
         self.lower_bound_tensor = th.tensor(np.load(lowerbound_path)).to(self.device)
         self.warm_start_path = warmstart_path
 
-        if self.algo_type == 'warmstart':
+        if 'warmstart' in self.algo_type:
             self.source_model = DQN.load(self.warm_start_path)
             q_net_state_dict = self.source_model.policy.q_net.state_dict()
             q_net_target_state_dict = self.policy.q_net_target.state_dict()
@@ -66,7 +66,7 @@ class LowerboundDQN(DQN):
                 # 1-step TD target
                 target_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * next_q_values
 
-                if self.algo_type == 'lowerbound':
+                if 'lowerbound' in self.algo_type:
                     lowerbound_v_values = self.state_to_lowerbound(replay_data.next_observations, self.lower_bound_tensor)
                     lowerbound_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * lowerbound_v_values
                     max_q_values = th.max(target_q_values, lowerbound_q_values)

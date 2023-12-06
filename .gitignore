@@ -1,5 +1,8 @@
 checkpoints/
 logs/
+wandb/
+
+stablebaseline_dqn_CC.py
 
 *.pyc
 *.zip
