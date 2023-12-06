@@ -1,0 +1,27 @@
+{
+    "domain_type" : "rover2",
+    "instance_type" : "source",
+    "algo_type": "dqn",
+    "domain_path": "./RDDL/rover2/domain.rddl",
+    "instance_path_source": "./RDDL/rover2/instance1.rddl",
+    "instance_path_target": "./RDDL/rover2/instance2.rddl",
+    "cache_path":"./saved_tensor/rover2/rover_10_None.npy",
+    "save_path":"./checkpoints/rover2/",
+    "log_path":"./logs/rover2/",
+    "warmstart_model": "./checkpoints/rover2/rover_10_dqn_source_1000interval/best_model.zip",
+    "sdp_steps": 10,
+    "gamma":0.9,
+    "tau": 0.001,
+    "exp_beg": 0.9,
+    "exp_final": 0.1,
+    "buffer_size": 1000000,
+    "batch_size": 128,
+    "exploration_fraction":0.2,
+    "max_eps_length": 100,
+    "total_timesteps": 10000000,
+    "target_update_interval": 100,
+    "net_arch": [64,128,64],
+    "random_start": true,
+    "notes": "None"
+   
+}

@@ -15,7 +15,8 @@ class LowerboundDQN(DQN):
         self.action_list = env.action_list
         self.observation_list = env.observation_list
         self.sample_range = env.sample_range
-        self.lower_bound_tensor = th.tensor(np.load(lowerbound_path)).to(self.device)
+        if 'lowerbound' in self.algo_type:
+            self.lower_bound_tensor = th.tensor(np.load(lowerbound_path)).to(self.device)
         self.warm_start_path = warmstart_path
 
         if 'warmstart' in self.algo_type:
