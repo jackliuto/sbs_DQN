@@ -1,6 +1,7 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+import wandb
 
 from envs.Env  import envWrapper
 from dqn.LowerboundDQN import LowerboundDQN
@@ -11,8 +12,6 @@ from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, EvalCallback
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.env_checker import check_env
-
-import pdb
 
 
 params = Params("./params/train/rover.json")
@@ -56,6 +55,9 @@ elif params.domain_type == "uav":
 policy_kwargs = dict(
     net_arch=params.net_arch  # Example architecture: three layers with 64, 128, and 64 units
 )
+
+wandb
+
 
 # set enviroment
 RDDLEnv = RDDLEnv.RDDLEnv(domain=DOMAIN_PATH, instance=INSTANCE_PATH)

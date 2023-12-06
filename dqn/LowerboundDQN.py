@@ -39,7 +39,7 @@ class LowerboundDQN(DQN):
                 combined_tensor = th.cat((combined_tensor, state[s]), dim=1)
         idx_tensor = combined_tensor[:,1:].to(th.int64)
         indices = list(idx_tensor.t())
-        lowerbound = lb_tensor[indices].reshape(-1, 1) * 0.5
+        lowerbound = lb_tensor[indices].reshape(-1, 1)
 
         return lowerbound
 
