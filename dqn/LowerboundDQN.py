@@ -6,6 +6,8 @@ from stable_baselines3.dqn import DQN
 
 from torch.nn import functional as F
 
+from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type, TypeVar, Union
+
 import pdb
 
 class LowerboundDQN(DQN):
@@ -19,12 +21,19 @@ class LowerboundDQN(DQN):
             self.lower_bound_tensor = th.tensor(np.load(lowerbound_path)).to(self.device)
         self.warm_start_path = warmstart_path
 
+        self.lb_decay = 0.999
+
+        self.ppr_rate = 0.1
+
         if 'warmstart' in self.algo_type:
             self.source_model = DQN.load(self.warm_start_path)
             q_net_state_dict = self.source_model.policy.q_net.state_dict()
             q_net_target_state_dict = self.policy.q_net_target.state_dict()
             self.policy.q_net.load_state_dict(q_net_state_dict)
             self.policy.q_net_target.load_state_dict(q_net_target_state_dict)
+
+        if "ppr" in self.algo_type:
+            self.ppr_model = DQN.load(self.warm_start_path)
             
 
     def state_to_lowerbound(self, state, lb_tensor):
@@ -69,6 +78,7 @@ class LowerboundDQN(DQN):
 
                 if 'lowerbound' in self.algo_type:
                     lowerbound_v_values = self.state_to_lowerbound(replay_data.next_observations, self.lower_bound_tensor)
+                    lowerbound_v_values *= self.lb_decay
                     lowerbound_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * lowerbound_v_values
                     max_q_values = th.max(target_q_values, lowerbound_q_values)
                     target_q_values = max_q_values
@@ -95,3 +105,39 @@ class LowerboundDQN(DQN):
 
         self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
         self.logger.record("train/loss", np.mean(losses))
+
+    def predict(
+        self,
+        observation: Union[np.ndarray, Dict[str, np.ndarray]],
+        state: Optional[Tuple[np.ndarray, ...]] = None,
+        episode_start: Optional[np.ndarray] = None,
+        deterministic: bool = False,
+    ) -> Tuple[np.ndarray, Optional[Tuple[np.ndarray, ...]]]:
+        """
+        Overrides the base_class predict function to include epsilon-greedy exploration.
+
+        :param observation: the input observation
+        :param state: The last states (can be None, used in recurrent policies)
+        :param episode_start: The last masks (can be None, used in recurrent policies)
+        :param deterministic: Whether or not to return deterministic actions.
+        :return: the model's action and the next state
+            (used in recurrent policies)
+        """
+        if not deterministic and np.random.rand() < self.exploration_rate:
+            if self.policy.is_vectorized_observation(observation):
+                if isinstance(observation, dict):
+                    n_batch = observation[next(iter(observation.keys()))].shape[0]
+                else:
+                    n_batch = observation.shape[0]
+                action = np.array([self.action_space.sample() for _ in range(n_batch)])
+            else:
+                action = np.array(self.action_space.sample())
+        else:
+            if self.algo_type == "ppr":
+                if np.random.rand() < self.ppr_rate:
+                    action, state = self.ppr_model.policy.predict(observation, state, episode_start, deterministic)
+                else:
+                    action, state = self.policy.predict(observation, state, episode_start, deterministic)
+            else :
+                action, state = self.policy.predict(observation, state, episode_start, deterministic)
+        return action, state

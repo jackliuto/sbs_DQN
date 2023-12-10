@@ -1,7 +1,7 @@
 import warnings
 warnings.filterwarnings("ignore")
 
-
+import os
 
 import wandb
 from wandb.integration.sb3 import WandbCallback
@@ -17,7 +17,7 @@ from stable_baselines3.common.logger import configure
 from stable_baselines3.common.env_checker import check_env
 
 
-params = Params("./params/train/rover.json")
+params = Params("./params/train/power.json")
 
 # globalvars
 ALGO_TYPE = params.algo_type
@@ -48,19 +48,24 @@ SAVE_PATH = params.save_path+MODEL_NAME+'/'
 LOG_PATH = params.log_path+MODEL_NAME+'/'
 
 
-if params.domain_type == "rover":
+if "rover" in params.domain_type :
     SAMPLE_RANGE = {'pos_x___a1':(0.0, 10.0, 1.0), 'pos_y___a1':(0.0, 10.0, 1.0), 'has_mineral___a1':(True, False, None)}
 elif params.domain_type == "uav":
     SAMPLE_RANGE = {'pos_x___a1':(0.0, 10.0, 1.0), 'pos_y___a1':(0.0, 10.0, 1.0), 'pos_z___a1':(0.0, 10.0, 1.0),
                     'vel___a1':(1.0, 2.0, 0.1),
                     'phi___a1':(0.0, 1.0, 0.1), 'theta___a1':(0.0, 1.0, 0.1), 'psi___a1':(0.0, 1.0, 0.1),
                     }
+elif params.domain_type == "reservoir":
+    SAMPLE_RANGE = {'rlevel___t1':(0.0, 100.0, 1.0), 'rlevel___t2':(0.0, 100.0, 1.0)}
+elif params.domain_type == "power":
+    SAMPLE_RANGE = {'curProd___p1':(0.0, 10, 1.0), 'curProd___p2':(0.0, 10.0, 1.0),'curProd___p3':(0.0, 10.0, 1.0)}
+
 
 policy_kwargs = dict(
     net_arch=params.net_arch  # Example architecture: three layers with 64, 128, and 64 units
 )
 
-wandb.init(project="lowerbound_dqn", 
+wandb.init(project="lb_dqn_CC", 
            name=MODEL_NAME, 
            config=params,
            sync_tensorboard=True
@@ -71,10 +76,11 @@ wandb.init(project="lowerbound_dqn",
 RDDLEnv = RDDLEnv.RDDLEnv(domain=DOMAIN_PATH, instance=INSTANCE_PATH)
 env = envWrapper(RDDLEnv, sample_range=SAMPLE_RANGE, max_episode_length=MAX_EPS_LEN, random_start=RANDOM_START)
 
+
 eval_env = envWrapper(RDDLEnv, sample_range=SAMPLE_RANGE, max_episode_length=MAX_EPS_LEN, random_start=False)
 
 # set callbacks
-checkpoint_callback = CheckpointCallback(save_freq = 10000, 
+checkpoint_callback = CheckpointCallback(save_freq = 1000000, 
                                          save_path = SAVE_PATH,
                                          name_prefix = MODEL_NAME)
 

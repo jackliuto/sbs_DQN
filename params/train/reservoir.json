@@ -1,0 +1,27 @@
+{
+    "domain_type" : "reservoir",
+    "instance_type" : "target",
+    "algo_type": "dqn",
+    "domain_path": "./RDDL/reservoir/domain.rddl",
+    "instance_path_source": "./RDDL/reservoir/instance1.rddl",
+    "instance_path_target": "./RDDL/reservoir/instance2.rddl",
+    "cache_path":"./saved_tensor/reservoir/reservoir_10_None.npy",
+    "save_path":"./checkpoints/reservoir/",
+    "log_path":"./logs/reservoir/",
+    "warmstart_model": "./checkpoints/reservoir/reservoir_10_dqn_source_100_0.9_None/best_model.zip",
+    "sdp_steps": 10,
+    "gamma":0.9,
+    "tau": 0.001,
+    "exp_beg": 0.1,
+    "exp_final": 0.1,
+    "buffer_size": 100000,
+    "batch_size": 128,
+    "exploration_fraction":0.1,
+    "max_eps_length": 50,
+    "total_timesteps": 1000000,
+    "target_update_interval": 100,
+    "net_arch": [32,32],
+    "random_start": true,
+    "notes": ""
+   
+}

@@ -10,7 +10,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
-params = Params("./params/sdp/rover.json")
+params = Params("./params/sdp/rover2.json")
 
 # globalvars
 
@@ -29,7 +29,7 @@ MODEL_PATH=params.model_path
 MODEL_NAME = '{0}_{1}_{2}'.format(DOMAIN_TYPE, SDP_STEPS, TREE_DEPTH)
 SAVE_PATH = params.save_path+MODEL_NAME+'.npy'
 
-if params.domain_type == "rover":
+if "rover" in DOMAIN_TYPE:
     SAMPLE_RANGE = {'pos_x___a1':(0.0, 10.0, 1.0), 'pos_y___a1':(0.0, 10.0, 1.0), 'has_mineral___a1':(True, False, None)}
 elif params.domain_type == "uav":
     SAMPLE_RANGE = {'pos_x___a1':(0.0, 10.0, 1.0), 'pos_y___a1':(0.0, 10.0, 1.0), 'pos_z___a1':(0.0, 10.0, 1.0),

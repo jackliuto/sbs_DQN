@@ -1,0 +1,27 @@
+{
+    "domain_type" : "power",
+    "instance_type" : "source",
+    "algo_type": "dqn",
+    "domain_path": "./RDDL/power/domain.rddl",
+    "instance_path_source": "./RDDL/power/instance1.rddl",
+    "instance_path_target": "./RDDL/power/instance2.rddl",
+    "cache_path":"./saved_tensor/power/power_10_None.npy",
+    "save_path":"./checkpoints/power/",
+    "log_path":"./logs/power/",
+    "warmstart_model": "./checkpoints/power/power_10_dqn_source_1000interval/best_model.zip",
+    "sdp_steps": 10,
+    "gamma":0.9,
+    "tau": 0.001,
+    "exp_beg": 0.9,
+    "exp_final": 0.1,
+    "buffer_size": 100000,
+    "batch_size": 128,
+    "exploration_fraction":0.2,
+    "max_eps_length": 50,
+    "total_timesteps": 1000000,
+    "target_update_interval": 500,
+    "net_arch": [32,32],
+    "random_start": true,
+    "notes": "None"
+   
+}
